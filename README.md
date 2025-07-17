@@ -4,7 +4,7 @@ A modern, fully responsive Gemini-style conversational AI chat application built
 
 ## 🚀 Live Demo
 
-> [Add your deployed Vercel/Netlify link here]
+> (https://gemini-chat-6xbw-arbaz-naddafs-projects.vercel.app/)
 
 ---
 
