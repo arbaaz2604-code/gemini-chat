@@ -52,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
         const newMsg = {
           id: Date.now().toString() + Math.random(),
           chatroomId,
-          sender: "user" as "user",
+          sender: "user" as const,
           text,
           image,
           timestamp: Date.now(),
@@ -64,7 +64,7 @@ export const useAuthStore = create<AuthState>()(
           const aiMsg = {
             id: Date.now().toString() + Math.random(),
             chatroomId,
-            sender: "ai" as "ai",
+            sender: "ai" as const,
             text: "This is a simulated Gemini AI reply.",
             image: undefined,
             timestamp: Date.now(),

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "axios";
 import { Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
+import Image from 'next/image';
 
 const phoneSchema = z.object({
   country: z.string().min(1, "Country is required"),
@@ -21,15 +22,17 @@ const OTP_LENGTH = 6;
 // Remove SIMULATED_OTP, use state for real OTP
 
 export default function AuthForm({ onAuthAction }: { onAuthAction: () => void }) {
-  const [countries, setCountries] = useState<any[]>([]);
+  const [countries, setCountries] = useState<{
+    name: string;
+    code: string;
+    dialCode: string;
+  }[]>([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [fetchError, setFetchError] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [loading, setLoading] = useState(false);
-  const [sentOtp, setSentOtp] = useState(false);
   const [error, setError] = useState("");
-  const [countrySearch, setCountrySearch] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState<any | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<{ name: string; code: string; dialCode: string } | null>(null);
   const [generatedOtp, setGeneratedOtp] = useState<string | null>(null);
   const [otpMessage, setOtpMessage] = useState<string>("");
   const [resendDisabled, setResendDisabled] = useState(false);
@@ -39,7 +42,6 @@ export default function AuthForm({ onAuthAction }: { onAuthAction: () => void })
     register,
     handleSubmit,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<PhoneForm>({
     resolver: zodResolver(phoneSchema),
@@ -52,21 +54,22 @@ export default function AuthForm({ onAuthAction }: { onAuthAction: () => void })
     axios.get("https://restcountries.com/v3.1/all?fields=name,cca2,idd")
       .then((res) => {
         const countryList = res.data
-          .map((c: any) => {
+          .map((c: unknown) => {
+            const country = c as { name: { common: string }; cca2: string; idd?: { root?: string; suffixes?: string[] } };
             let dialCode = "";
-            if (c.idd?.root && Array.isArray(c.idd.suffixes) && c.idd.suffixes.length > 0) {
-              dialCode = c.idd.suffixes.map((s: string) => `${c.idd.root}${s}`).join(", ");
-            } else if (c.idd?.root) {
-              dialCode = c.idd.root;
+            if (country.idd && country.idd.root && Array.isArray(country.idd.suffixes) && country.idd.suffixes.length > 0) {
+              dialCode = country.idd.suffixes.map((s: string) => `${country.idd && country.idd.root ? country.idd.root : ''}${s}`).join(", ");
+            } else if (country.idd && country.idd.root) {
+              dialCode = country.idd.root;
             }
             return {
-              name: c.name.common,
-              code: c.cca2,
+              name: country.name.common,
+              code: country.cca2,
               dialCode,
             };
           })
-          .filter((c: any) => c.dialCode)
-          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+          .filter((c: { dialCode: string }) => c.dialCode)
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
         setCountries(countryList);
         setLoadingCountries(false);
       })
@@ -81,7 +84,6 @@ export default function AuthForm({ onAuthAction }: { onAuthAction: () => void })
       setLoading(true);
       setTimeout(() => {
         setLoading(false);
-        setSentOtp(true);
         setStep("otp");
         // Generate a random 6-digit OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -118,24 +120,19 @@ export default function AuthForm({ onAuthAction }: { onAuthAction: () => void })
     setTimeout(() => setResendDisabled(false), 2000);
   };
 
-  // Filtered countries for dropdown
-  const filteredCountries = countrySearch
-    ? countries.filter((c) => c.name.toLowerCase().includes(countrySearch.toLowerCase()) || c.dialCode.includes(countrySearch))
-    : countries;
-
   // Sync selectedCountry with form value
   React.useEffect(() => {
     if (selectedCountry) {
       setValue("country", selectedCountry.name);
       setValue("dialCode", selectedCountry.dialCode);
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, setValue]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-blue-300 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900">
       <div className="w-full max-w-md mx-auto p-0 sm:p-0 bg-transparent flex flex-col items-center">
         <div className="w-full flex flex-col items-center mb-6">
-          <img src="/globe.svg" alt="Gemini Logo" className="h-16 w-16 mb-2 drop-shadow-lg" />
+          <Image src="/globe.svg" alt="Gemini Logo" width={64} height={64} className="h-16 w-16 mb-2 drop-shadow-lg" />
           <h1 className="text-4xl font-extrabold text-center mb-2 text-blue-700 dark:text-blue-200 tracking-tight drop-shadow-lg">Gemini Chat</h1>
           <p className="text-gray-500 dark:text-gray-400 text-center text-base font-medium mb-2">Sign in to start chatting with Gemini AI</p>
         </div>
